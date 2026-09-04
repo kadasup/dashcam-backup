@@ -9,7 +9,11 @@ dashcam-backup
 進度與最近更動都在 Obsidian：`創作庫/dashcam-backup/dashcam-backup-工作筆記.md`
 
 ## 🕳️ 已知地雷（動工前必讀）
-（尚無。踩到「只有本專案會犯」的坑時由 /收工 分診寫入，一條一行：部署流程怪癖、欄位對位、特定 API 行為等。跨專案的坑不放這裡——寫進全域記憶或 流程/Claude工作知識庫。）
+- robocopy 摘要表頭隨環境變語言：對話裡跑是英文 `Files :`，排程器跑是中文 `檔案 :`；`Get-RobocopySummary` 兩種都要認，改 regex 時兩種都要測。
+- robocopy `/UNILOG` 實測寫出 ANSI；讀 log 先看 BOM 決定編碼。
+- robocopy 保留來源 CreationTime，「到達時間」是腳本複製後自己標的，別拿建立時間反推複製時間。
+- `%LOCALAPPDATA%\dashcam-backup\` 的狀態檔在 Claude 工具裡看到的可能是覆蓋層假象（見全域記憶 pitfall-localappdata-overlay）；驗證排程產物用排程器跑 `dir` 輸出到新檔。
+- 保留清理總開關 `$RetentionApply` 預設 `$false`，要使用者看過預覽 log 才可改 `$true`。
 
 ## 工作模式
 - **結束工作**：說「收工」→ 自動 commit + push + 更新 Obsidian 工作筆記
