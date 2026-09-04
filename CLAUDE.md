@@ -14,7 +14,7 @@ dashcam-backup
 - robocopy 保留來源 CreationTime，「到達時間」是腳本複製後自己標的，別拿建立時間反推複製時間。
 - `%LOCALAPPDATA%\dashcam-backup\` 的狀態檔在 Claude 工具裡看到的可能是覆蓋層假象（見全域記憶 pitfall-localappdata-overlay）；驗證排程產物用排程器跑 `dir` 輸出到新檔。
 - 插卡觸發用 StorageVolume/Operational 1001，**不要用 Kernel-PnP/Configuration 410**：2026-09-04 實測拔插卡完全沒有 410（只在裝置首次設定時記），1001 每次都有。換訊號前先實際拔插一次、掃全部記錄檔看哪個有動。
-- 保留清理總開關 `$RetentionApply` 預設 `$false`，要使用者看過預覽 log 才可改 `$true`。
+- 保留清理總開關 `$RetentionApply` 已於 2026-09-04 經使用者確認改 `$true`。清理跟著備份跑，SD 卡不在場就不清（第二道保險要比對來源）。
 
 ## 工作模式
 - **結束工作**：說「收工」→ 自動 commit + push + 更新 Obsidian 工作筆記
