@@ -3,9 +3,12 @@
   dashcam-backup / install-task.ps1
   註冊（或移除、檢查）工作排程器的「Dashcam-Backup」工作。可重複執行，會覆蓋舊設定。
 
-  觸發：只有插卡事件。Microsoft-Windows-Kernel-PnP/Configuration 事件 410（裝置啟動），延遲 30 秒等磁碟掛好。
-  任何 USB 裝置插入都會觸發，但 backup.ps1 找不到 SD 卡就靜默結束，成本極低。
+  觸發：只有插卡事件。Microsoft-Windows-StorageVolume/Operational 事件 1001（Volume arrived），延遲 30 秒等磁碟掛好。
+  任何磁碟區掛載都會觸發（含隨身碟），但 backup.ps1 找不到 SD 卡就靜默結束，成本極低。
   （使用者決定不要每日定時備援）
+
+  ⚠️ 不要用 Kernel-PnP/Configuration 410：實測 2026-09-04 拔插 SD 卡完全沒有 410，
+  它只在裝置第一次設定／換讀卡機時才記；StorageVolume 1001 則每次插卡都有。
 
   用法：
     install-task.ps1               註冊
@@ -60,7 +63,7 @@ $evt = New-CimInstance -CimClass $evtClass -ClientOnly
 $evt.Enabled = $true
 $evt.Delay = 'PT30S'
 $evt.Subscription = @'
-<QueryList><Query Id="0" Path="Microsoft-Windows-Kernel-PnP/Configuration"><Select Path="Microsoft-Windows-Kernel-PnP/Configuration">*[System[Provider[@Name='Microsoft-Windows-Kernel-PnP'] and EventID=410]]</Select></Query></QueryList>
+<QueryList><Query Id="0" Path="Microsoft-Windows-StorageVolume/Operational"><Select Path="Microsoft-Windows-StorageVolume/Operational">*[System[Provider[@Name='Microsoft-Windows-StorageVolume'] and EventID=1001]]</Select></Query></QueryList>
 '@
 
 $settings = New-ScheduledTaskSettingsSet -MultipleInstances IgnoreNew `
@@ -75,6 +78,6 @@ Register-ScheduledTask -TaskName $TaskName -Action $action -Trigger $evt `
     -Description '行車紀錄器 SD 卡插入時自動備份到外接硬碟（dashcam-backup/backup.ps1）' | Out-Null
 
 Write-Host "[OK] 已註冊工作「$TaskName」"
-Write-Host "     觸發：插卡事件 Kernel-PnP/Configuration 410（延遲 30 秒），沒有定時觸發"
+Write-Host "     觸發：插卡事件 StorageVolume/Operational 1001（延遲 30 秒），沒有定時觸發"
 Write-Host "     腳本：$ps1"
 Write-Host "     驗證：拔卡再插，30 秒後應跳出通知；或執行 install-task.ps1 -Check"

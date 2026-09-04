@@ -19,7 +19,8 @@ powershell -ExecutionPolicy Bypass -File .\install-task.ps1
 
 會在工作排程器建立「Dashcam-Backup」，只有一個觸發：
 
-- **插卡事件**：`Microsoft-Windows-Kernel-PnP/Configuration` 事件 410，延遲 30 秒。任何 USB 裝置插入都會觸發，但腳本找不到 SD 卡就立刻結束。沒有定時觸發，卡沒插就什麼都不會跑。
+- **插卡事件**：`Microsoft-Windows-StorageVolume/Operational` 事件 1001（Volume arrived），延遲 30 秒。任何磁碟區掛載都會觸發（隨身碟也會），但腳本找不到 SD 卡就立刻結束。沒有定時觸發，卡沒插就什麼都不會跑。
+- 不用 Kernel-PnP 410：實測拔插 SD 卡時它不一定出現（只在裝置第一次設定時記），1001 每次都有。
 
 工作設成「只在使用者登入時執行」，通知才顯示得出來。不需要管理員權限。
 
@@ -69,7 +70,7 @@ powershell -ExecutionPolicy Bypass -File .\backup.ps1           # 正式執行
 
 | 現象 | 看哪裡 |
 |---|---|
-| 插卡沒反應 | 事件檢視器 → 應用程式及服務記錄檔 → Microsoft → Windows → Kernel-PnP → Configuration，確認有事件 410；工作排程器的「歷程記錄」看有沒有觸發 |
+| 插卡沒反應 | 事件檢視器 → 應用程式及服務記錄檔 → Microsoft → Windows → StorageVolume → Operational，確認插卡時間有事件 1001；工作排程器的「歷程記錄」看有沒有觸發 |
 | 有觸發但沒通知 | `last-run.json` 與最新 `backup-*.log`；確認工作是「只在使用者登入時執行」 |
 | 每次都重新複製 | robocopy log 看原因；FAT32 時間戳精度 2 秒，已用 `/FFT` 處理 |
 | robocopy 回傳碼 | 1 有複製、2 目的地有多的檔（正常）、4 不符、8 有失敗、16 嚴重錯誤 |
