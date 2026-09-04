@@ -17,5 +17,5 @@ dashcam-backup
 
 ## 三個家
 - 📋 本機：`~/Desktop/Claude/dashcam-backup/`
-- 🐙 GitHub：（push 完成後填入）
+- 🐙 GitHub：https://github.com/kadasup/dashcam-backup
 - 📘 Obsidian：`創作庫/dashcam-backup/dashcam-backup-工作筆記.md`
