@@ -7,8 +7,9 @@
 1. 用**磁碟區標籤**找 SD 卡（`MUFU V20S`）和外接硬碟（`2T-2`），磁碟代號變了也不受影響。
 2. robocopy 遞迴複製整個 `Video` 資料夾到 `<外接硬碟>\!!行車紀錄器\Video`。已存在且相同的檔案自動略過，失敗自動重試 3 次。
 3. 目的地 `Video` 只保留 120 天。清理有三道保險，見下。
-4. 結束時跳 Windows 通知：成功顯示新增／略過數量，失敗顯示原因與 log 路徑，失敗通知會停在畫面上直到按掉。
-5. SD 卡沒插時靜默結束，不吵人。外接硬碟沒接、或資料夾結構不對，一定跳通知。
+4. 全程有進度：偵測到 SD 卡就在右下角開一個小視窗（階段、目前檔名、進度條、已複製 GB 與剩餘時間），同時發一張「偵測到 SD 卡」通知；複製中通知中心裡有一張帶進度條的通知每 8 秒原地更新；結束時視窗顯示結果，成功 15 秒後自動關閉，失敗留著（最多 10 分鐘）。關掉視窗不影響備份。
+5. 失敗另外跳一張會停在畫面上的通知，附原因與 log 路徑。
+6. SD 卡沒插時靜默結束，不吵人。外接硬碟沒接、或資料夾結構不對，一定跳通知。
 
 ## 安裝（換電腦也是這幾步）
 
@@ -19,7 +20,7 @@ powershell -ExecutionPolicy Bypass -File .\install-task.ps1
 
 會在工作排程器建立「Dashcam-Backup」，只有一個觸發：
 
-- **插卡事件**：`Microsoft-Windows-StorageVolume/Operational` 事件 1001（Volume arrived），延遲 30 秒。任何磁碟區掛載都會觸發（隨身碟也會），但腳本找不到 SD 卡就立刻結束。沒有定時觸發，卡沒插就什麼都不會跑。
+- **插卡事件**：`Microsoft-Windows-StorageVolume/Operational` 事件 1001（Volume arrived），延遲 5 秒，腳本自己再等 SD 卡掛好（最多 15 秒）。任何磁碟區掛載都會觸發（隨身碟也會），但腳本找不到 SD 卡就立刻結束。沒有定時觸發，卡沒插就什麼都不會跑。
 - 不用 Kernel-PnP 410：實測拔插 SD 卡時它不一定出現（只在裝置第一次設定時記），1001 每次都有。
 
 工作設成「只在使用者登入時執行」，通知才顯示得出來。不需要管理員權限。
@@ -31,6 +32,7 @@ powershell -ExecutionPolicy Bypass -File .\install-task.ps1
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\backup.ps1 -DryRun   # robocopy 只列清單、清理只預覽
 powershell -ExecutionPolicy Bypass -File .\backup.ps1           # 正式執行
+# 加 -NoWindow 不開進度視窗、-NoToast 不發通知（除錯用）
 ```
 
 ## 設定
