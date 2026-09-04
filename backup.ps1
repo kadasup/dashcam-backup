@@ -103,7 +103,7 @@ function Find-VolumeRoot([string]$Label) {
 
 function Format-GB([double]$Bytes) { return ('{0:N1} GB' -f ($Bytes / 1GB)) }
 
-# 讀 robocopy 的 Unicode log，抓最後一段摘要
+# 讀 robocopy 的 log，抓最後一段摘要
 function Get-RobocopySummary([string]$Path) {
     $r = @{ Ok = $false; Total = 0; Copied = 0; Skipped = 0; Mismatch = 0; Failed = 0; Extras = 0; CopiedBytes = 0 }
     if (-not (Test-Path -LiteralPath $Path)) { return $r }
@@ -111,16 +111,17 @@ function Get-RobocopySummary([string]$Path) {
     $head = [IO.File]::ReadAllBytes($Path) | Select-Object -First 2
     $enc = if ($head.Count -ge 2 -and $head[0] -eq 0xFF -and $head[1] -eq 0xFE) { 'Unicode' } else { 'Default' }
     $lines = Get-Content -LiteralPath $Path -Encoding $enc
-    $fileLine = $lines | Where-Object { $_ -match '^\s*Files\s*:\s+\d' } | Select-Object -Last 1
-    $byteLine = $lines | Where-Object { $_ -match '^\s*Bytes\s*:\s+\d' } | Select-Object -Last 1
-    if ($fileLine -match '^\s*Files\s*:\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)') {
-        $r.Total = [int]$Matches[1]; $r.Copied = [int]$Matches[2]; $r.Skipped = [int]$Matches[3]
-        $r.Mismatch = [int]$Matches[4]; $r.Failed = [int]$Matches[5]; $r.Extras = [int]$Matches[6]
+    # 表頭會隨 UI 語言變：互動視窗是英文（Files / Bytes），排程環境實測是中文（檔案 / 位元組）
+    $fileLine = $lines | Where-Object { $_ -match '^\s*(Files|檔案)\s*:\s+\d' } | Select-Object -Last 1
+    $byteLine = $lines | Where-Object { $_ -match '^\s*(Bytes|位元組)\s*:\s+\d' } | Select-Object -Last 1
+    if ($fileLine -match '^\s*(Files|檔案)\s*:\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)') {
+        $r.Total = [int]$Matches[2]; $r.Copied = [int]$Matches[3]; $r.Skipped = [int]$Matches[4]
+        $r.Mismatch = [int]$Matches[5]; $r.Failed = [int]$Matches[6]; $r.Extras = [int]$Matches[7]
         $r.Ok = $true
     }
-    if ($byteLine -match '^\s*Bytes\s*:\s+([\d.]+)\s*([kmgt]?)\s+([\d.]+)\s*([kmgt]?)') {
+    if ($byteLine -match '^\s*(Bytes|位元組)\s*:\s+([\d.]+)\s*([kmgt]?)\s+([\d.]+)\s*([kmgt]?)') {
         $mult = @{ '' = 1; 'k' = 1KB; 'm' = 1MB; 'g' = 1GB; 't' = 1TB }
-        $r.CopiedBytes = [double]$Matches[3] * $mult[$Matches[4]]
+        $r.CopiedBytes = [double]$Matches[4] * $mult[$Matches[5]]
     }
     return $r
 }
@@ -196,7 +197,7 @@ $logDir = Join-Path $StateDir 'logs'
 New-Item -ItemType Directory -Force -Path $logDir | Out-Null
 $stamp = $startedAt.ToString('yyyyMMdd-HHmmss')
 $script:LogFile = Join-Path $logDir "backup-$stamp.log"
-$rcLog          = Join-Path $logDir "robocopy-$stamp.log"
+$rcLog          = $null   # 每個資料夾跑 robocopy 時各自指定（robocopy-<時間>-<資料夾>.log）
 $tag = if ($DryRun) { '【試跑】' } else { '' }
 
 # lock：防重疊
@@ -265,8 +266,10 @@ try {
         }
 
         # /XX：不理會目的地多出來的檔案（舊備份），log 才不會被幾千行 EXTRA 洗掉
+        # 每個資料夾各一個 robocopy log，摘要才不會互相混到
+        $rcLog = Join-Path $logDir "robocopy-$stamp-$name.log"
         $rcArgs = @($s, $d, '/E', '/COPY:DAT', '/DCOPY:T', '/FFT', '/DST', '/XJ', '/XX',
-                    "/R:$RobocopyRetries", '/W:5', '/NP', '/NDL', "/LOG+:$rcLog")
+                    "/R:$RobocopyRetries", '/W:5', '/NP', '/NDL', "/LOG:$rcLog")
         if ($DryRun) { $rcArgs += '/L' }
         Write-Log "${name}：robocopy $s → $d"
         $t0 = Get-Date
@@ -315,7 +318,14 @@ try {
 
     $lastRun = @{ StartedAt = $startedAt.ToString('s'); Minutes = $mins; DryRun = [bool]$DryRun
                   Totals = $Totals; Problems = $script:Problems; Log = $script:LogFile; RobocopyLog = $rcLog }
-    $lastRun | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath (Join-Path $StateDir 'last-run.json') -Encoding UTF8
+    try {
+        $json = $lastRun | ConvertTo-Json -Depth 4
+        $lrPath = Join-Path $StateDir 'last-run.json'
+        [IO.File]::WriteAllText($lrPath, $json, (New-Object Text.UTF8Encoding $true))
+        Write-Log "last-run.json 已寫入 $lrPath（$([IO.File]::GetLastWriteTime($lrPath).ToString('HH:mm:ss'))，$([IO.File]::ReadAllBytes($lrPath).Length) bytes）"
+    } catch {
+        Write-Log "last-run.json 寫入失敗：$($_.Exception.Message)" 'WARN'
+    }
 
     if ($script:Problems.Count -gt 0) {
         Write-Log "===== 結束：有 $($script:Problems.Count) 個問題。$stat =====" 'ERROR'
