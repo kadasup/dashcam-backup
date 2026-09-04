@@ -3,20 +3,17 @@
   dashcam-backup / install-task.ps1
   註冊（或移除、檢查）工作排程器的「Dashcam-Backup」工作。可重複執行，會覆蓋舊設定。
 
-  觸發：
-    1. 事件觸發：Microsoft-Windows-Kernel-PnP/Configuration 事件 410（裝置啟動），延遲 30 秒等磁碟掛好。
-       任何 USB 裝置插入都會觸發，但 backup.ps1 找不到 SD 卡就靜默結束，成本極低。
-    2. 每日備援：預設 12:00 跑一次，萬一事件漏掉也有補。
+  觸發：只有插卡事件。Microsoft-Windows-Kernel-PnP/Configuration 事件 410（裝置啟動），延遲 30 秒等磁碟掛好。
+  任何 USB 裝置插入都會觸發，但 backup.ps1 找不到 SD 卡就靜默結束，成本極低。
+  （使用者決定不要每日定時備援）
 
   用法：
     install-task.ps1               註冊
-    install-task.ps1 -DailyTime 20:00
     install-task.ps1 -Check        顯示目前狀態與最後執行結果
     install-task.ps1 -Uninstall    移除
 #>
 [CmdletBinding()]
 param(
-    [string]$DailyTime = '12:00',
     [switch]$Check,
     [switch]$Uninstall
 )
@@ -33,7 +30,7 @@ if ($Check) {
     $i = $t | Get-ScheduledTaskInfo
     Write-Host "[OK] 工作：$TaskName  狀態：$($t.State)"
     Write-Host "     動作：$($t.Actions[0].Execute) $($t.Actions[0].Arguments)"
-    Write-Host "     觸發：$($t.Triggers.Count) 個（事件 + 每日）"
+    Write-Host "     觸發：$($t.Triggers.Count) 個（插卡事件）"
     Write-Host "     上次執行：$($i.LastRunTime)  結果碼：$($i.LastTaskResult)  下次：$($i.NextRunTime)"
     $lr = Join-Path $env:LOCALAPPDATA 'dashcam-backup\last-run.json'
     if (Test-Path $lr) {
@@ -66,8 +63,6 @@ $evt.Subscription = @'
 <QueryList><Query Id="0" Path="Microsoft-Windows-Kernel-PnP/Configuration"><Select Path="Microsoft-Windows-Kernel-PnP/Configuration">*[System[Provider[@Name='Microsoft-Windows-Kernel-PnP'] and EventID=410]]</Select></Query></QueryList>
 '@
 
-$daily = New-ScheduledTaskTrigger -Daily -At $DailyTime
-
 $settings = New-ScheduledTaskSettingsSet -MultipleInstances IgnoreNew `
     -ExecutionTimeLimit (New-TimeSpan -Hours 6) `
     -StartWhenAvailable -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries
@@ -75,12 +70,11 @@ $settings = New-ScheduledTaskSettingsSet -MultipleInstances IgnoreNew `
 # 只在使用者登入時執行（Interactive），toast 通知才顯示得出來；不需要管理員
 $principal = New-ScheduledTaskPrincipal -UserId "$env:USERDOMAIN\$env:USERNAME" -LogonType Interactive -RunLevel Limited
 
-Register-ScheduledTask -TaskName $TaskName -Action $action -Trigger @($evt, $daily) `
+Register-ScheduledTask -TaskName $TaskName -Action $action -Trigger $evt `
     -Settings $settings -Principal $principal -Force `
     -Description '行車紀錄器 SD 卡插入時自動備份到外接硬碟（dashcam-backup/backup.ps1）' | Out-Null
 
 Write-Host "[OK] 已註冊工作「$TaskName」"
-Write-Host "     事件觸發：Kernel-PnP/Configuration 410（延遲 30 秒）"
-Write-Host "     每日備援：$DailyTime"
+Write-Host "     觸發：插卡事件 Kernel-PnP/Configuration 410（延遲 30 秒），沒有定時觸發"
 Write-Host "     腳本：$ps1"
 Write-Host "     驗證：拔卡再插，30 秒後應跳出通知；或執行 install-task.ps1 -Check"

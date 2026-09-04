@@ -27,9 +27,9 @@ $DestLabel    = '2T-2'             # 外接硬碟的磁碟區標籤
 $DestRootName = '!!行車紀錄器'      # 外接硬碟底下的根資料夾（必須已存在，避免複製到錯的碟）
 
 # 要備份的子資料夾。RetentionDays = 目的地保留天數，0 = 永不清理
+# （SD 卡上還有 Event、Picture，使用者決定只要 Video；要加就多一列）
 $Folders = @(
-    @{ Name = 'Video'; Required = $true;  RetentionDays = 120 },
-    @{ Name = 'Event'; Required = $false; RetentionDays = 0   }   # 碰撞鎖定影片，永久保留
+    @{ Name = 'Video'; Required = $true; RetentionDays = 120 }
 )
 
 # 保留清理開關：第一次先 $false 只預覽，看過 log 確認無誤後改成 $true

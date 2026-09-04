@@ -5,8 +5,8 @@
 ## 做什麼
 
 1. 用**磁碟區標籤**找 SD 卡（`MUFU V20S`）和外接硬碟（`2T-2`），磁碟代號變了也不受影響。
-2. robocopy 遞迴複製 `Video`（和 `Event`，若有）到 `<外接硬碟>\!!行車紀錄器\` 底下。已存在且相同的檔案自動略過，失敗自動重試 3 次。
-3. 目的地 `Video` 只保留 120 天，`Event`（碰撞鎖定影片）永久保留。清理有三道保險，見下。
+2. robocopy 遞迴複製整個 `Video` 資料夾到 `<外接硬碟>\!!行車紀錄器\Video`。已存在且相同的檔案自動略過，失敗自動重試 3 次。
+3. 目的地 `Video` 只保留 120 天。清理有三道保險，見下。
 4. 結束時跳 Windows 通知：成功顯示新增／略過數量，失敗顯示原因與 log 路徑，失敗通知會停在畫面上直到按掉。
 5. SD 卡沒插時靜默結束，不吵人。外接硬碟沒接、或資料夾結構不對，一定跳通知。
 
@@ -17,10 +17,9 @@ cd ~\Desktop\Claude\dashcam-backup
 powershell -ExecutionPolicy Bypass -File .\install-task.ps1
 ```
 
-會在工作排程器建立「Dashcam-Backup」，兩個觸發：
+會在工作排程器建立「Dashcam-Backup」，只有一個觸發：
 
-- **插卡事件**：`Microsoft-Windows-Kernel-PnP/Configuration` 事件 410，延遲 30 秒。任何 USB 裝置插入都會觸發，但腳本找不到 SD 卡就立刻結束。
-- **每日備援**：預設 12:00，可用 `-DailyTime 20:00` 改。
+- **插卡事件**：`Microsoft-Windows-Kernel-PnP/Configuration` 事件 410，延遲 30 秒。任何 USB 裝置插入都會觸發，但腳本找不到 SD 卡就立刻結束。沒有定時觸發，卡沒插就什麼都不會跑。
 
 工作設成「只在使用者登入時執行」，通知才顯示得出來。不需要管理員權限。
 
@@ -42,7 +41,7 @@ powershell -ExecutionPolicy Bypass -File .\backup.ps1           # 正式執行
 | `$SourceLabel` | `MUFU V20S` | SD 卡標籤 |
 | `$DestLabel` | `2T-2` | 外接硬碟標籤 |
 | `$DestRootName` | `!!行車紀錄器` | 硬碟底下的根資料夾，**必須已存在**（防止接錯碟） |
-| `$Folders` | Video 120 天、Event 永久 | 要備份的子資料夾與各自保留天數，0 = 永不清理 |
+| `$Folders` | Video 120 天 | 要備份的子資料夾與各自保留天數，0 = 永不清理。SD 卡上還有 `Event`、`Picture`，要加就多一列 |
 | `$RetentionApply` | `$false` | **清理總開關**。第一次先預覽，看過 log 確認後改 `$true` |
 | `$MinArrivalDays` | 7 | 檔案到達目的地滿幾天才可清 |
 | `$MaxDeletePct` | 30 | 單次刪除超過總數幾 % 就中止並通知 |
@@ -79,4 +78,5 @@ powershell -ExecutionPolicy Bypass -File .\backup.ps1           # 正式執行
 
 - 不刪 SD 卡上的任何檔案，行車紀錄器自己循環覆寫。
 - 不算 hash，影片寫完不會變，檔名＋大小＋時間夠用。
-- 不動 `!!行車紀錄器` 底下 `Video`／`Event` 以外的任何東西（那裡放的是申訴用的重要檔案）。
+- 不動 `!!行車紀錄器` 底下 `Video` 以外的任何東西（那裡放的是申訴用的重要檔案）。
+- 不備份 SD 卡的 `Event`、`Picture` 資料夾，不做定時備援（使用者決定）。
