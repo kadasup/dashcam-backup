@@ -43,6 +43,9 @@ $MinArrivalDays = 7      # 檔案到達目的地至少 N 天才可清（防時�
 $MaxDeletePct   = 30     # 單次要刪的檔案超過總數 N% 就中止並通知
 $MaxFileAgeDays = 400    # 修改時間比這還舊、或在未來 → 視為時鐘異常，不刪並通知
 
+# Windows 通知中心的通知：None = 不發（只靠進度視窗，2026-09-04 使用者決定）、ErrorsOnly = 只有失敗才發、All = 偵測到／進度條／結果都發
+$ToastMode = 'None'
+
 $SourceWaitSeconds        = 15   # 事件觸發後 SD 卡可能還沒掛好，最多等這麼久
 $WindowCloseSeconds       = 15   # 成功後進度視窗停留幾秒自動關閉
 $ErrorWindowCloseSeconds  = 600  # 失敗時視窗最多停留幾秒（lock 已先釋放，不擋下一次）
@@ -77,7 +80,6 @@ function Format-GB([double]$Bytes) { return ('{0:N1} GB' -f ($Bytes / 1GB)) }
 
 # ================= 通知（Windows 通知中心） =================
 function Initialize-Toast {
-    if ($NoToast) { return $false }
     if ($script:Toast.Ready) { return $true }
     try {
         [Windows.UI.Notifications.ToastNotificationManager, Windows.UI.Notifications, ContentType = WindowsRuntime] | Out-Null
@@ -95,6 +97,8 @@ function Initialize-Toast {
 
 function Show-Toast {
     param([string]$Title, [string]$Body, [switch]$Urgent)
+    if ($NoToast -or $ToastMode -eq 'None') { return }
+    if (-not $Urgent -and $ToastMode -ne 'All') { return }
     if (-not (Initialize-Toast)) {
         if ($Urgent) { try { Add-Type -AssemblyName System.Windows.Forms; [System.Windows.Forms.MessageBox]::Show($Body, $Title, 'OK', 'Warning') | Out-Null } catch { } }
         return
@@ -120,6 +124,7 @@ function Show-Toast {
 # 同一張帶進度條的通知，原地更新（tag 固定），複製中每隔幾秒更新一次
 function Update-ProgressToast {
     param([string]$Status, [double]$Value, [string]$ValueText, [string]$Detail, [switch]$Final, [switch]$Force)
+    if ($NoToast -or $ToastMode -ne 'All') { return }
     if (-not (Initialize-Toast)) { return }
     $now = Get-Date
     if (-not $Final -and -not $Force -and $script:Toast.ProgressShown -and ($now - $script:Toast.LastUpdate).TotalSeconds -lt $ProgressToastInterval) { return }
