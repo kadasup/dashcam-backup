@@ -35,8 +35,8 @@ $Folders = @(
     @{ Name = 'Video'; Required = $true; RetentionDays = 120 }
 )
 
-# 保留清理開關：第一次先 $false 只預覽，看過 log 確認無誤後改成 $true
-$RetentionApply = $false
+# 保留清理開關：第一次先 $false 只預覽，看過 log 確認無誤後改成 $true（2026-09-04 使用者確認開啟）
+$RetentionApply = $true
 
 # 清理的三道保險
 $MinArrivalDays = 7      # 檔案到達目的地至少 N 天才可清（防時鐘錯亂的檔案一到就被刪）
