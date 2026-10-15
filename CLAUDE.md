@@ -21,6 +21,6 @@ dashcam-backup
 - **接續工作**：說「開工」→ 讀工作筆記、報告 git 狀態、建議下一步
 
 ## 三個家
-- 📋 本機：`~/Desktop/Claude/dashcam-backup/`
+- 📋 本機：Claude 根目錄的 `dashcam-backup/`（CYRUS-21729 是 `C:\Claude\dashcam-backup`，其他電腦是 `~/Desktop/Claude/dashcam-backup`）
 - 🐙 GitHub：https://github.com/kadasup/dashcam-backup
 - 📘 Obsidian：`創作庫/dashcam-backup/dashcam-backup-工作筆記.md`

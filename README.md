@@ -14,7 +14,7 @@
 ## 安裝（換電腦也是這幾步）
 
 ```powershell
-cd ~\Desktop\Claude\dashcam-backup
+cd ~\Desktop\Claude\dashcam-backup   # Claude 根目錄底下；CYRUS-21729 是 cd C:\Claude\dashcam-backup
 powershell -ExecutionPolicy Bypass -File .\install-task.ps1
 ```
 
